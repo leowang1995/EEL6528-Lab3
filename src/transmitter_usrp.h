@@ -57,9 +57,13 @@ private:
     double sample_rate_;
     int samples_per_symbol_;
     double excess_bw_;
+    double beta_;           // Rolloff factor
     int num_taps_;
+    int U_;                 // Upsampling factor
+    int D_;                 // Downsampling factor
 
-    void design_rrc_taps();
+    void find_ud_ratio(double ratio, int& U, int& D);
+    void design_rrc_taps(int len);
 
 public:
     RRCPulseShaper(double symbol_rate, double sample_rate, 
@@ -162,7 +166,49 @@ public:
 // ============================================================================
 class SignalScaler {
 public:
+    // Statistics structure
+    struct Statistics {
+        float min_magnitude = 0.0f;
+        float max_magnitude = 0.0f;
+        float mean_magnitude = 0.0f;
+        float std_deviation = 0.0f;
+        float papr_db = 0.0f;
+        int samples_near_clipping = 0;
+    };
+    
+    // Histogram structure
+    struct Histogram {
+        int num_bins = 0;
+        std::vector<int> bins;
+        float min_value = 0.0f;
+        float max_value = 0.0f;
+        std::vector<float> bin_edges;
+    };
+    
+    // PSD Result structure
+    struct PSDResult {
+        std::vector<float> psd_db;
+        std::vector<float> frequencies;
+        float peak_freq = 0.0f;
+        float total_power_db = 0.0f;
+        float bw_3db = 0.0f;
+        float bw_occupied_99 = 0.0f;
+        bool bw_within_spec = false;
+    };
+    
     static float analyze_peak(const std::vector<std::complex<float>>& samples);
+    
+    static Statistics compute_statistics(const std::vector<std::complex<float>>& samples);
+    
+    static Histogram generate_histogram(const std::vector<std::complex<float>>& samples,
+                                       int num_bins = 20);
+    
+    static void print_histogram(const Histogram& hist, 
+                               const std::string& title = "",
+                               int width = 50);
+    
+    static void save_histogram(const Histogram& hist,
+                              const std::string& filename);
     
     static float compute_scale_factor(const std::vector<std::complex<float>>& samples,
                                       float target_peak = 0.8f);
@@ -172,6 +218,21 @@ public:
     
     // Compute PAPR (Peak to Average Power Ratio)
     static float compute_papr(const std::vector<std::complex<float>>& samples);
+    
+    static int count_clipped_samples(const std::vector<std::complex<float>>& samples,
+                                    float clip_threshold = 1.0f);
+    
+    // PSD analysis
+    static int next_power_of_2(int n);
+    static void fft(std::vector<std::complex<float>>& x);
+    static PSDResult compute_psd(const std::vector<std::complex<float>>& samples,
+                                double sample_rate,
+                                int fft_size = 0);
+    static void print_psd_summary(const PSDResult& psd,
+                                 double sample_rate,
+                                 double symbol_rate);
+    static void save_psd(const PSDResult& psd,
+                        const std::string& filename);
 };
 
 // ============================================================================
@@ -212,7 +273,12 @@ void modulator_transmitter_thread(ThreadSafeBitFIFO& fifo,
                                   ModulationType mod_type,
                                   double symbol_rate,
                                   double sample_rate,
-                                  const std::string& save_file = "");
+                                  const std::string& save_file = "",
+                                  float target_peak = 0.7f,
+                                  bool show_histogram = true,
+                                  bool save_histogram_file = false,
+                                  bool show_psd = true,
+                                  bool save_psd_file = false);
 
 // ============================================================================
 // Utility functions

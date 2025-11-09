@@ -16,6 +16,10 @@
 #include <algorithm>
 #include <stdexcept>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 // ============================================================================
 // Global stop flag and signal handler
 // ============================================================================
@@ -203,8 +207,9 @@ void RRCPulseShaper::find_ud_ratio(double ratio, int& U, int& D) {
     
     double actual_ratio = static_cast<double>(U) / D;
     if (std::abs(actual_ratio - ratio) > 0.01) {
-        std::cout << "Unable to find exact U/D ratio.\n"
+        std::cout << "Unable to find exact U/D ratio.\n";
     }
+}
 
 void RRCPulseShaper::design_rrc_taps(int len) {
     // ALLOCATE FILTER TAPS
