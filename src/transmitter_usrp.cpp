@@ -4,7 +4,7 @@
 // ============================================================================
 
 
-#include "transmitter_usrp.hpp"
+#include "transmitter_usrp.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>
